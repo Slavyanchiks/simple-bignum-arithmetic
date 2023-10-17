@@ -1,10 +1,17 @@
 #pragma once
 #include <cinttypes>
 #include <iostream>
-#include <bitset>
+#include <cstring>
 
 const size_t kInt2023Size = 253;
 const size_t kInt32Size = 4;
+const size_t kUint8Size = 8;
+
+const int kASCIIMinusCode = 45;
+const int kASCIIFirstNumSymbolCode = 48;
+const int kInputNumBase = 10;
+const int kBinaryNumBase = 2;
+const int kOutputNumBase = 256;
 
 struct int2023_t {
     uint8_t digit[kInt2023Size]{};
