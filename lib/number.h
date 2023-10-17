@@ -12,6 +12,7 @@ const int kASCIIFirstNumSymbolCode = 48;
 const int kInputNumBase = 10;
 const int kBinaryNumBase = 2;
 const int kOutputNumBase = 256;
+const int kMinValToNegative = 128;
 
 struct int2023_t {
     uint8_t digit[kInt2023Size]{};
@@ -26,7 +27,6 @@ struct int2023_t {
             digit[i] = value.digit[i];
         }
     }
-
 };
 
 static_assert(sizeof(int2023_t) <= 253, "Size of int2023_t must be no higher than 253 bytes");
@@ -41,11 +41,19 @@ int2023_t operator+(const int2023_t& lhs, const int2023_t& rhs);
 
 int2023_t operator-(const int2023_t& lhs, const int2023_t& rhs);
 
+int2023_t shift_left(const int2023_t& value, short shift);
+
+int2023_t shift_right(const int2023_t& value, short shift);
+
 int2023_t operator*(const int2023_t& lhs, const int2023_t& rhs);
 
 int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs);
 
 int2023_t operator~(const int2023_t& lhs);
+
+int2023_t operator&(const int2023_t& lhs, const int2023_t& rhs);
+
+int2023_t operator|(const int2023_t& lhs, const int2023_t& rhs);
 
 bool operator==(const int2023_t& lhs, const int2023_t& rhs);
 

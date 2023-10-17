@@ -1,5 +1,7 @@
 #include "number.h"
 
+const int2023_t kShortSizeLenMask = from_int(65535);
+const int2023_t kZeroValue = from_int(0);
 
 int2023_t from_int(int32_t number) {
     int2023_t val;
@@ -135,8 +137,71 @@ int2023_t operator-(const int2023_t& lhs, const int2023_t& rhs) {
     return lhs + right_operand;
 }
 
+int2023_t shift_left(const int2023_t& value, short shift) {
+    int2023_t result;
+
+    for (short i = shift; i < kInt2023Size; ++i) {
+        result.digit[i - shift] = value.digit[i];
+    }
+
+    return result;
+}
+
+int2023_t shift_right(const int2023_t& value, short shift) {
+    int2023_t result;
+
+    for (short i = kInt2023Size - 1; i > shift - 1; --i) {
+        result.digit[i] = value.digit[i - shift];
+    }
+
+    return result;
+}
+
+int2023_t karatsuba_multiplying(const int2023_t& left, const int2023_t& right) {
+
+    if (right == kZeroValue || left == kZeroValue) {
+        return from_int(0);
+    }
+
+    if ((left | kShortSizeLenMask) == kShortSizeLenMask && (right | kShortSizeLenMask) == kShortSizeLenMask) {
+        uint32_t num = (left.digit[kInt2023Size - 2] << 8 | left.digit[kInt2023Size - 1]) * (right.digit[kInt2023Size - 2] << 8 | right.digit[kInt2023Size - 1]);
+
+        int2023_t res;
+        for (int i = 0; i < kInt32Size; ++i) {
+            res.digit[kInt2023Size - i - 1] = static_cast<uint8_t>(num % kOutputNumBase);
+            num = num >> kUint8Size;
+        }
+
+        return res;
+    }
+
+    // (a*x + c)*(b*x + d) = ab*x^2 + (ad + bc)*x + cd   <- Karatsuba multiplying method
+    int2023_t ab = karatsuba_multiplying(shift_right(left, 2), shift_right(right, 2));
+    int2023_t ad_bc = karatsuba_multiplying(shift_right(left, 2), right & kShortSizeLenMask) + karatsuba_multiplying(shift_right(right, 2), left & kShortSizeLenMask);
+    int2023_t cd = karatsuba_multiplying(left & kShortSizeLenMask, right & kShortSizeLenMask);
+
+    return shift_left(ab, 4) + shift_left(ad_bc, 2) + cd;
+}
+
 int2023_t operator*(const int2023_t& lhs, const int2023_t& rhs) {
-    return int2023_t();
+    int2023_t result;
+    int2023_t lhs_copy = lhs;
+    int2023_t rhs_copy = rhs;
+
+    if (lhs.digit[0] >= kMinValToNegative) {
+        lhs_copy = ~lhs_copy + from_int(1);
+    }
+    if (rhs.digit[0] >= kMinValToNegative) {
+        rhs_copy = ~rhs_copy + from_int(1);
+    }
+
+    result = karatsuba_multiplying(lhs_copy, rhs_copy);
+
+    if ((lhs.digit[0] >= kMinValToNegative) xor (rhs.digit[0] >= kMinValToNegative)) {
+        return ~result + from_int(1);
+    }
+
+    return result;
 }
 
 int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs) {
@@ -151,6 +216,26 @@ int2023_t operator~(const int2023_t& rhs) {
     }
 
     return value;
+}
+
+int2023_t operator&(const int2023_t& lhs, const int2023_t& rhs) {
+    int2023_t result;
+
+    for (int i = 0; i < kInt2023Size; ++i) {
+        result.digit[i] = lhs.digit[i] & rhs.digit[i];
+    }
+
+    return result;
+}
+
+int2023_t operator|(const int2023_t& lhs, const int2023_t& rhs) {
+    int2023_t result;
+
+    for (int i = 0; i < kInt2023Size; ++i) {
+        result.digit[i] = lhs.digit[i] | rhs.digit[i];
+    }
+
+    return result;
 }
 
 bool operator==(const int2023_t& lhs, const int2023_t& rhs) {
