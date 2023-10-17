@@ -27,6 +27,33 @@ int32_t to_int(const int2023_t& val) {
     return result;
 }
 
+void divide_long_by2 (char* buff_copy, int &str_len) {
+    char next_buff[str_len];
+    int iter_next_buff = 0;
+    int next_num = 0;
+
+    int iter_buff_copy = 0;
+    while (iter_buff_copy < str_len) {
+        int division_value = (static_cast<int>(buff_copy[iter_buff_copy]) - kASCIIFirstNumSymbolCode) * 5;
+
+        if (division_value == 5 && next_num == 0 && iter_buff_copy == 0) {
+            next_num = division_value;
+        } else {
+            next_buff[iter_next_buff] = static_cast<char>(kASCIIFirstNumSymbolCode + division_value / kInputNumBase + next_num);
+            next_num = division_value % kInputNumBase;
+            ++iter_next_buff;
+        }
+
+        ++iter_buff_copy;
+    }
+
+    for (int i = 0; i < iter_next_buff; ++i) {
+        buff_copy[i] = next_buff[i];
+    }
+
+    str_len = iter_next_buff;
+}
+
 int2023_t from_string(const char* buff) {
     int2023_t result;
     auto str_len = static_cast<int32_t>(strlen(buff));
@@ -52,7 +79,6 @@ int2023_t from_string(const char* buff) {
     int iter_digit = kInt2023Size - 1;
     int digit_value = 0;
     int pow_num = 1;
-    int previous_num = 0;
 
     while (!eol) {
         if (iter_to8 == kUint8Size) {
@@ -62,6 +88,10 @@ int2023_t from_string(const char* buff) {
             iter_to8 = 0;
             digit_value = 0;
             pow_num = 1;
+
+            if (iter_digit < 0) {
+                iter_digit = kInt2023Size - 1;
+            }
         }
 
         digit_value += ((static_cast<int>(buff_copy[str_len - 1]) - kASCIIFirstNumSymbolCode) % kBinaryNumBase) * pow_num;
@@ -71,30 +101,7 @@ int2023_t from_string(const char* buff) {
         if (strncmp(buff_copy, "1", 1) == 0 && str_len == 1) {
             eol = true;
         } else {
-            char next_buff[str_len];
-            int iter_next_buff = 0;
-
-            int iter_buff_copy = 0;
-            while (iter_buff_copy < str_len) {
-                int division_value = (static_cast<int>(buff_copy[iter_buff_copy]) - kASCIIFirstNumSymbolCode) * 5;
-
-                if (division_value == 5 && previous_num == 0 && iter_buff_copy == 0) {
-                    previous_num = division_value;
-                } else {
-                    next_buff[iter_next_buff] = static_cast<char>(kASCIIFirstNumSymbolCode + division_value / kInputNumBase + previous_num);
-                    previous_num = division_value % kInputNumBase;
-                    ++iter_next_buff;
-                }
-
-                ++iter_buff_copy;
-            }
-
-            for (int i = 0; i < iter_next_buff; ++i) {
-                buff_copy[i] = next_buff[i];
-            }
-
-            str_len = iter_next_buff;
-            previous_num = 0;
+            divide_long_by2(buff_copy, str_len);
         }
     }
     result.digit[iter_digit] = digit_value;
@@ -112,7 +119,7 @@ int2023_t operator+(const int2023_t& lhs, const int2023_t& rhs) {
 
     for (int i = kInt2023Size - 1; i > -1; --i) {
         result.digit[i] = (lhs.digit[i] + rhs.digit[i] + digit_transition) % kOutputNumBase;
-        if (lhs.digit[i] + rhs.digit[i] > kOutputNumBase - 1) {
+        if ((lhs.digit[i] + rhs.digit[i] + digit_transition) > kOutputNumBase - 1) {
             digit_transition = 1;
         } else {
             digit_transition = 0;
