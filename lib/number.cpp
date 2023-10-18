@@ -18,17 +18,6 @@ int2023_t from_int(int32_t number) {
     return val;
 }
 
-int32_t to_int(const int2023_t& val) {
-    int32_t result = 0;
-    int pow_num = 1;
-    for (int i = 0; i < kInt32Size; ++i) {
-        result += val.digit[kInt2023Size - 1 - i] * (pow_num);
-        pow_num *= kOutputNumBase;
-    }
-
-    return result;
-}
-
 void divide_long_by2 (char* buff_copy, int &str_len) {
     char next_buff[str_len];
     int iter_next_buff = 0;
@@ -137,7 +126,7 @@ int2023_t operator-(const int2023_t& lhs, const int2023_t& rhs) {
     return lhs + right_operand;
 }
 
-int2023_t shift_left(const int2023_t& value, short shift) {
+int2023_t shift_digit_left(const int2023_t& value, short shift) {
     int2023_t result;
 
     for (short i = shift; i < kInt2023Size; ++i) {
@@ -147,7 +136,7 @@ int2023_t shift_left(const int2023_t& value, short shift) {
     return result;
 }
 
-int2023_t shift_right(const int2023_t& value, short shift) {
+int2023_t shift_digit_right(const int2023_t& value, short shift) {
     int2023_t result;
 
     for (short i = kInt2023Size - 1; i > shift - 1; --i) {
@@ -176,11 +165,11 @@ int2023_t karatsuba_multiplying(const int2023_t& left, const int2023_t& right) {
     }
 
     // (a*x + c)*(b*x + d) = ab*x^2 + (ad + bc)*x + cd   <- Karatsuba multiplying method
-    int2023_t ab = karatsuba_multiplying(shift_right(left, 2), shift_right(right, 2));
-    int2023_t ad_bc = karatsuba_multiplying(shift_right(left, 2), right & kShortSizeLenMask) + karatsuba_multiplying(shift_right(right, 2), left & kShortSizeLenMask);
+    int2023_t ab = karatsuba_multiplying(shift_digit_right(left, 2), shift_digit_right(right, 2));
+    int2023_t ad_bc = karatsuba_multiplying(shift_digit_right(left, 2), right & kShortSizeLenMask) + karatsuba_multiplying(shift_digit_right(right, 2), left & kShortSizeLenMask);
     int2023_t cd = karatsuba_multiplying(left & kShortSizeLenMask, right & kShortSizeLenMask);
 
-    return shift_left(ab, 4) + shift_left(ad_bc, 2) + cd;
+    return shift_digit_left(ab, 4) + shift_digit_left(ad_bc, 2) + cd;
 }
 
 int2023_t operator*(const int2023_t& lhs, const int2023_t& rhs) {
@@ -204,8 +193,90 @@ int2023_t operator*(const int2023_t& lhs, const int2023_t& rhs) {
     return result;
 }
 
+int2023_t& shift_bit_through_digit_right(int2023_t& value) {
+    for (int i = kInt2023Size - 1; i > 0; --i) {
+        value.digit[i] = value.digit[i] >> 1;
+        uint8_t last_bit = value.digit[i - 1] << 7;
+        value.digit[i] = value.digit[i] | last_bit;
+    }
+    value.digit[0] = value.digit[0] >> 1;
+
+    return value;
+}
+
+int2023_t division(const int2023_t& left, const int2023_t& right, const int2023_t& numerator, const int2023_t& denominator) {
+    int2023_t middle = left + right;
+    shift_bit_through_digit_right(middle);
+    int2023_t multiplication = middle * denominator;
+
+    int2023_t main_diff = multiplication - numerator;
+    int2023_t supplement_diff = (multiplication + denominator) - numerator;
+
+    if (main_diff.digit[0] >= kMinValToNegative && supplement_diff.digit[0] < kMinValToNegative) {
+        return middle;
+    }
+
+    if (main_diff.digit[0] >= kMinValToNegative) {
+        return division(middle, right, numerator, denominator);
+    } else {
+        return division(left, middle, numerator, denominator);
+    }
+}
+
 int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs) {
-    return int2023_t();
+    int2023_t result;
+    int2023_t numerator = lhs;
+    int2023_t denominator = rhs;
+
+    if (lhs.digit[0] >= kMinValToNegative) {
+        numerator = ~numerator + from_int(1);
+    }
+    if (rhs.digit[0] >= kMinValToNegative) {
+        denominator = ~denominator + from_int(1);
+    }
+
+    int2023_t check = numerator - denominator;
+    if (check.digit[0] >= kMinValToNegative || numerator == kZeroValue) {
+        return from_int(0);
+    }
+
+    if (denominator == kZeroValue) {
+        std::cerr << "ZeroDivisionError: division by zero";
+        return from_int(0);
+    }
+    if (numerator == denominator) {
+        return from_int(1);
+    }
+
+    if (denominator == from_int(1)) {
+        result = numerator;
+        if ((lhs.digit[0] >= kMinValToNegative) xor (rhs.digit[0] >= kMinValToNegative)) {
+            return ~result + from_int(1);
+        }
+        return result;
+    }
+
+    short numer_digit_count = 0;
+    short denom_digit_count = 0;
+
+    while (numerator.digit[numer_digit_count] == 0) {
+        ++numer_digit_count;
+    }
+    while (denominator.digit[denom_digit_count] == 0) {
+        ++denom_digit_count;
+    }
+    int2023_t right;
+    for (short i = 0; i < denom_digit_count - numer_digit_count + 2; ++i) {
+        right.digit[kInt2023Size - 1 - i] = 255;
+    }
+
+    result = division(kZeroValue, right, numerator, denominator);
+
+    if ((lhs.digit[0] >= kMinValToNegative) xor (rhs.digit[0] >= kMinValToNegative)) {
+        return ~result + from_int(1);
+    }
+
+    return result;
 }
 
 int2023_t operator~(const int2023_t& rhs) {
