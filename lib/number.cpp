@@ -10,15 +10,15 @@ int2023_t from_int(int32_t number) {
         val = ~val;
     }
 
-    for (int i = 0; i < kInt32Size; ++i) {
-        val.digit[kInt2023Size - i - 1] = static_cast<uint8_t>(number % kOutputNumBase);
-        number = number >> kUint8Size;
+    for (int i = 0; i < int2023_t::kInt32Size; ++i) {
+        val.digit[int2023_t::kInt2023Size - i - 1] = static_cast<uint8_t>(number % kOutputNumBase);
+        number = number >> int2023_t::kUint8Size;
     }
 
     return val;
 }
 
-void divide_long_by2 (char* buff_copy, int &str_len) {
+void divide_long_by2 (char* buff_copy, int& str_len) {
     char next_buff[str_len];
     int iter_next_buff = 0;
     int next_num = 0;
@@ -51,7 +51,7 @@ int2023_t from_string(const char* buff) {
     bool is_positive = true;
     bool eol = false;
 
-    if (strncmp(buff, "0", 1) == 0) {
+    if (buff[0] == '0') {
         return result;
     }
 
@@ -66,13 +66,13 @@ int2023_t from_string(const char* buff) {
     }
     buff_copy[str_len] = '\0';
 
-    int iter_to8 = 0;
-    int iter_digit = kInt2023Size - 1;
+    int16_t iter_to8 = 0;
+    int16_t iter_digit = int2023_t::kInt2023Size - 1;
     int digit_value = 0;
     int pow_num = 1;
 
     while (!eol) {
-        if (iter_to8 == kUint8Size) {
+        if (iter_to8 == int2023_t::kUint8Size) {
             result.digit[iter_digit] = digit_value;
 
             --iter_digit;
@@ -81,7 +81,7 @@ int2023_t from_string(const char* buff) {
             pow_num = 1;
 
             if (iter_digit < 0) {
-                iter_digit = kInt2023Size - 1;
+                iter_digit = int2023_t::kInt2023Size - 1;
             }
         }
 
@@ -89,7 +89,7 @@ int2023_t from_string(const char* buff) {
         pow_num *= kBinaryNumBase;
         ++iter_to8;
 
-        if (strncmp(buff_copy, "1", 1) == 0 && str_len == 1) {
+        if (buff_copy[0] == '1' && str_len == 1) {
             eol = true;
         } else {
             divide_long_by2(buff_copy, str_len);
@@ -97,18 +97,14 @@ int2023_t from_string(const char* buff) {
     }
     result.digit[iter_digit] = digit_value;
 
-    if (!is_positive) {
-        return ~(result) + from_int(1);
-    }
-
-    return result;
+    return is_positive ? result : -result;
 }
 
 int2023_t operator+(const int2023_t& lhs, const int2023_t& rhs) {
     int2023_t result;
-    short digit_transition = 0;
+    int16_t digit_transition = 0;
 
-    for (int i = kInt2023Size - 1; i > -1; --i) {
+    for (int i = int2023_t::kInt2023Size - 1; i > -1; --i) {
         result.digit[i] = (lhs.digit[i] + rhs.digit[i] + digit_transition) % kOutputNumBase;
         if ((lhs.digit[i] + rhs.digit[i] + digit_transition) > kOutputNumBase - 1) {
             digit_transition = 1;
@@ -121,15 +117,13 @@ int2023_t operator+(const int2023_t& lhs, const int2023_t& rhs) {
 }
 
 int2023_t operator-(const int2023_t& lhs, const int2023_t& rhs) {
-    int2023_t right_operand = ~rhs + from_int(1);
-
-    return lhs + right_operand;
+    return lhs + (-rhs);
 }
 
 int2023_t shift_digit_left(const int2023_t& value, short shift) {
     int2023_t result;
 
-    for (short i = shift; i < kInt2023Size; ++i) {
+    for (short i = shift; i < int2023_t::kInt2023Size; ++i) {
         result.digit[i - shift] = value.digit[i];
     }
 
@@ -139,7 +133,7 @@ int2023_t shift_digit_left(const int2023_t& value, short shift) {
 int2023_t shift_digit_right(const int2023_t& value, short shift) {
     int2023_t result;
 
-    for (short i = kInt2023Size - 1; i > shift - 1; --i) {
+    for (short i = int2023_t::kInt2023Size - 1; i > shift - 1; --i) {
         result.digit[i] = value.digit[i - shift];
     }
 
@@ -153,12 +147,12 @@ int2023_t karatsuba_multiplying(const int2023_t& left, const int2023_t& right) {
     }
 
     if ((left | kShortSizeLenMask) == kShortSizeLenMask && (right | kShortSizeLenMask) == kShortSizeLenMask) {
-        uint32_t num = (left.digit[kInt2023Size - 2] << 8 | left.digit[kInt2023Size - 1]) * (right.digit[kInt2023Size - 2] << 8 | right.digit[kInt2023Size - 1]);
+        uint32_t num = (left.digit[int2023_t::kInt2023Size - 2] << 8 | left.digit[int2023_t::kInt2023Size - 1]) * (right.digit[int2023_t::kInt2023Size - 2] << 8 | right.digit[int2023_t::kInt2023Size - 1]);
 
         int2023_t res;
-        for (int i = 0; i < kInt32Size; ++i) {
-            res.digit[kInt2023Size - i - 1] = static_cast<uint8_t>(num % kOutputNumBase);
-            num = num >> kUint8Size;
+        for (int i = 0; i < int2023_t::kInt32Size; ++i) {
+            res.digit[int2023_t::kInt2023Size - i - 1] = static_cast<uint8_t>(num % kOutputNumBase);
+            num = num >> int2023_t::kUint8Size;
         }
 
         return res;
@@ -174,27 +168,20 @@ int2023_t karatsuba_multiplying(const int2023_t& left, const int2023_t& right) {
 
 int2023_t operator*(const int2023_t& lhs, const int2023_t& rhs) {
     int2023_t result;
-    int2023_t lhs_copy = lhs;
-    int2023_t rhs_copy = rhs;
-
-    if (lhs.digit[0] >= kMinValToNegative) {
-        lhs_copy = ~lhs_copy + from_int(1);
-    }
-    if (rhs.digit[0] >= kMinValToNegative) {
-        rhs_copy = ~rhs_copy + from_int(1);
-    }
+    int2023_t lhs_copy = is_negative(lhs) ? -lhs : lhs;
+    int2023_t rhs_copy = is_negative(rhs) ? -rhs : rhs;
 
     result = karatsuba_multiplying(lhs_copy, rhs_copy);
 
-    if ((lhs.digit[0] >= kMinValToNegative) xor (rhs.digit[0] >= kMinValToNegative)) {
-        return ~result + from_int(1);
+    if (is_negative(lhs) ^ is_negative(rhs)) {
+        return -result;
     }
 
     return result;
 }
 
 int2023_t& shift_bit_through_digit_right(int2023_t& value) {
-    for (int i = kInt2023Size - 1; i > 0; --i) {
+    for (int i = int2023_t::kInt2023Size - 1; i > 0; --i) {
         value.digit[i] = value.digit[i] >> 1;
         uint8_t last_bit = value.digit[i - 1] << 7;
         value.digit[i] = value.digit[i] | last_bit;
@@ -212,11 +199,11 @@ int2023_t division(const int2023_t& left, const int2023_t& right, const int2023_
     int2023_t main_diff = multiplication - numerator;
     int2023_t supplement_diff = (multiplication + denominator) - numerator;
 
-    if (main_diff.digit[0] >= kMinValToNegative && supplement_diff.digit[0] < kMinValToNegative) {
+    if (is_negative(main_diff) && !is_negative(supplement_diff)) {
         return middle;
     }
 
-    if (main_diff.digit[0] >= kMinValToNegative) {
+    if (is_negative(main_diff)) {
         return division(middle, right, numerator, denominator);
     } else {
         return division(left, middle, numerator, denominator);
@@ -225,18 +212,11 @@ int2023_t division(const int2023_t& left, const int2023_t& right, const int2023_
 
 int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs) {
     int2023_t result;
-    int2023_t numerator = lhs;
-    int2023_t denominator = rhs;
+    int2023_t numerator = is_negative(lhs) ? -lhs : lhs;
+    int2023_t denominator = is_negative(rhs) ? -rhs : rhs;
 
-    if (lhs.digit[0] >= kMinValToNegative) {
-        numerator = ~numerator + from_int(1);
-    }
-    if (rhs.digit[0] >= kMinValToNegative) {
-        denominator = ~denominator + from_int(1);
-    }
-
-    int2023_t check = numerator - denominator;
-    if (check.digit[0] >= kMinValToNegative || numerator == kZeroValue) {
+    int2023_t delta = numerator - denominator;
+    if (is_negative(delta) || numerator == kZeroValue) {
         return from_int(0);
     }
 
@@ -250,8 +230,8 @@ int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs) {
 
     if (denominator == from_int(1)) {
         result = numerator;
-        if ((lhs.digit[0] >= kMinValToNegative) xor (rhs.digit[0] >= kMinValToNegative)) {
-            return ~result + from_int(1);
+        if (is_negative(lhs) ^ is_negative(rhs)) {
+            return -result;
         }
         return result;
     }
@@ -267,13 +247,13 @@ int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs) {
     }
     int2023_t right;
     for (short i = 0; i < denom_digit_count - numer_digit_count + 2; ++i) {
-        right.digit[kInt2023Size - 1 - i] = 255;
+        right.digit[int2023_t::kInt2023Size - 1 - i] = 255;
     }
 
     result = division(kZeroValue, right, numerator, denominator);
 
-    if ((lhs.digit[0] >= kMinValToNegative) xor (rhs.digit[0] >= kMinValToNegative)) {
-        return ~result + from_int(1);
+    if (is_negative(lhs) ^ is_negative(rhs)) {
+        return -result;
     }
 
     return result;
@@ -282,17 +262,21 @@ int2023_t operator/(const int2023_t& lhs, const int2023_t& rhs) {
 int2023_t operator~(const int2023_t& rhs) {
     int2023_t value;
 
-    for (int i = 0; i < kInt2023Size; ++i) {
+    for (int i = 0; i < int2023_t::kInt2023Size; ++i) {
         value.digit[i] = ~(rhs.digit[i]);
     }
 
     return value;
 }
 
+int2023_t operator-(const int2023_t& rhs) {
+    return ~rhs + from_int(1);
+}
+
 int2023_t operator&(const int2023_t& lhs, const int2023_t& rhs) {
     int2023_t result;
 
-    for (int i = 0; i < kInt2023Size; ++i) {
+    for (int i = 0; i < int2023_t::kInt2023Size; ++i) {
         result.digit[i] = lhs.digit[i] & rhs.digit[i];
     }
 
@@ -302,7 +286,7 @@ int2023_t operator&(const int2023_t& lhs, const int2023_t& rhs) {
 int2023_t operator|(const int2023_t& lhs, const int2023_t& rhs) {
     int2023_t result;
 
-    for (int i = 0; i < kInt2023Size; ++i) {
+    for (int i = 0; i < int2023_t::kInt2023Size; ++i) {
         result.digit[i] = lhs.digit[i] | rhs.digit[i];
     }
 
@@ -310,7 +294,7 @@ int2023_t operator|(const int2023_t& lhs, const int2023_t& rhs) {
 }
 
 bool operator==(const int2023_t& lhs, const int2023_t& rhs) {
-    for (int i = 0; i < kInt2023Size; ++i) {
+    for (int i = 0; i < int2023_t::kInt2023Size; ++i) {
         if (rhs.digit[i] - lhs.digit[i]) {
             return false;
         }
@@ -319,11 +303,14 @@ bool operator==(const int2023_t& lhs, const int2023_t& rhs) {
 }
 
 bool operator!=(const int2023_t& lhs, const int2023_t& rhs) {
-    for (int i = 0; i < kInt2023Size; ++i) {
-        if (rhs.digit[i] - lhs.digit[i]) {
-            return true;
-        }
+    return !(lhs == rhs);
+}
+
+bool is_negative(const int2023_t& value) {
+    if (value.digit[0] >= kMinValToNegative) {
+        return true;
     }
+
     return false;
 }
 
