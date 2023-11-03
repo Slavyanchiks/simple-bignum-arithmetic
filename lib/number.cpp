@@ -168,10 +168,18 @@ int2023_t karatsuba_multiplying(const int2023_t& left, const int2023_t& right) {
 
 int2023_t operator*(const int2023_t& lhs, const int2023_t& rhs) {
     int2023_t result;
-    int2023_t lhs_copy = is_negative(lhs) ? -lhs : lhs;
-    int2023_t rhs_copy = is_negative(rhs) ? -rhs : rhs;
+//    int2023_t lhs_copy = is_negative(lhs) ? -lhs : lhs;
+//    int2023_t rhs_copy = is_negative(rhs) ? -rhs : rhs;
 
-    result = karatsuba_multiplying(lhs_copy, rhs_copy);
+    if (is_negative(lhs) && is_negative(rhs)) {
+        result = karatsuba_multiplying(-lhs, -rhs);
+    } else if (is_negative(lhs)) {
+        result = karatsuba_multiplying(-lhs, rhs);
+    } else if (is_negative(rhs)) {
+        result = karatsuba_multiplying(lhs, -rhs);
+    } else {
+        result = karatsuba_multiplying(lhs, rhs);
+    }
 
     if (is_negative(lhs) ^ is_negative(rhs)) {
         return -result;
